@@ -3,6 +3,8 @@ from django.core.validators import validate_email
 from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 
+from .settings import EMAIL_FIELD_NAME
+from .settings import SECOND_EMAIL_FIELD_NAME
 from .utils import get_user_model
 
 
@@ -50,8 +52,12 @@ class PasswordRecoveryForm(forms.Form):
 
     def get_user_by_email(self, email):
         validate_email(email)
-        key = 'email__%sexact' % ('' if self.case_sensitive else 'i')
+        key = '%s__%sexact' % (EMAIL_FIELD_NAME, '' if self.case_sensitive else 'i')
         User = get_user_model()
+        filters = Q(**{key: email})
+        if SECOND_EMAIL_FIELD_NAME:
+            second_key = '%s__%sexact' % (SECOND_EMAIL_FIELD_NAME, '' if self.case_sensitive else 'i')
+            filters = Q(**{key: email}) | Q(**{second_key: email})
         try:
             user = User.objects.get(**{key: email})
         except User.DoesNotExist:
@@ -62,7 +68,9 @@ class PasswordRecoveryForm(forms.Form):
         key = '__%sexact'
         key = key % '' if self.case_sensitive else key % 'i'
         f = lambda field: Q(**{field + key: username})
-        filters = f('username') | f('email')
+        filters = f('username') | f(EMAIL_FIELD_NAME)
+        if SECOND_EMAIL_FIELD_NAME:
+            filters = f('username') | f(EMAIL_FIELD_NAME) | f(SECOND_EMAIL_FIELD_NAME) 
         User = get_user_model()
         try:
             user = User.objects.get(filters)
