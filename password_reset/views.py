@@ -15,27 +15,8 @@ from .forms import PasswordRecoveryForm, PasswordResetForm
 from .settings import EMAIL_FIELD_NAME
 from .settings import SECOND_EMAIL_FIELD_NAME
 from .utils import get_user_model
+from .utils import multi_getattr
 from .signals import user_recovers_password
-
-
-def multi_getattr(obj, attr, default = None):
-    """
-    Get a named attribute from an object; multi_getattr(x, 'a.b.c.d') is
-    equivalent to x.a.b.c.d. When a default argument is given, it is
-    returned when any attribute in the chain doesn't exist; without
-    it, an exception is raised when a missing attribute is encountered.
-
-    """
-    attributes = attr.split(".")
-    for i in attributes:
-        try:
-            obj = getattr(obj, i)
-        except AttributeError:
-            if default:
-                return default
-            else:
-                raise
-    return obj
 
 
 def get_email(user):
