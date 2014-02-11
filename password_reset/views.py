@@ -12,8 +12,37 @@ from django.utils import timezone
 from django.views import generic
 
 from .forms import PasswordRecoveryForm, PasswordResetForm
+from .settings import EMAIL_FIELD_NAME
+from .settings import SECOND_EMAIL_FIELD_NAME
 from .utils import get_user_model
 from .signals import user_recovers_password
+
+
+def multi_getattr(obj, attr, default = None):
+    """
+    Get a named attribute from an object; multi_getattr(x, 'a.b.c.d') is
+    equivalent to x.a.b.c.d. When a default argument is given, it is
+    returned when any attribute in the chain doesn't exist; without
+    it, an exception is raised when a missing attribute is encountered.
+
+    """
+    attributes = attr.split(".")
+    for i in attributes:
+        try:
+            obj = getattr(obj, i)
+        except AttributeError:
+            if default:
+                return default
+            else:
+                raise
+    return obj
+
+
+def get_email(user):
+    email = multi_getattr(user, EMAIL_FIELD_NAME.replace('__', '.'))
+    if SECOND_EMAIL_FIELD_NAME and (email is None or email == ''):
+        email = multi_getattr(user, SECOND_EMAIL_FIELD_NAME.replace('__', '.'))
+    return email
 
 
 class SaltMixin(object):
@@ -81,8 +110,9 @@ class Recover(SaltMixin, generic.FormView):
                                        context).strip()
         subject = loader.render_to_string(self.email_subject_template_name,
                                           context).strip()
+        email = get_email(self.user)
         send_mail(subject, body, settings.DEFAULT_FROM_EMAIL,
-                  [self.user.email])
+                  [email])
 
     def form_valid(self, form):
         self.user = form.cleaned_data['user']
@@ -95,7 +125,7 @@ class Recover(SaltMixin, generic.FormView):
             # since it may now be public information.
             email = self.user.username
         else:
-            email = self.user.email
+            email = get_email(self.user)
         self.mail_signature = signing.dumps(email, salt=self.url_salt)
         return super(Recover, self).form_valid(form)
 recover = Recover.as_view()
