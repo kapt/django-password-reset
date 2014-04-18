@@ -116,7 +116,7 @@ class Reset(SaltMixin, generic.FormView):
     form_class = PasswordResetForm
     token_expires = 3600 * 48  # Two days
     template_name = 'password_reset/reset.html'
-    success_url = reverse_lazy('password_reset_done')
+    success_url = reverse_lazy('password_reset_done_spe')
 
     def dispatch(self, request, *args, **kwargs):
         self.request = request
